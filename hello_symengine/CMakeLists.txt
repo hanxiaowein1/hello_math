@@ -23,6 +23,13 @@ target_link_libraries(${PROJECT_NAME} symengine)
 target_link_libraries(${PROJECT_NAME} "D:\\Library\\vcpkg\\packages\\flint_x64-windows\\lib\\flint.lib")
 
 
+enable_testing()
+find_package(GTest CONFIG REQUIRED)
+add_executable(unit_test unit_test.cpp multivariable_extream.cpp)
+target_link_libraries(unit_test GTest::gtest GTest::gmock)
+add_test(AllTestsInMain unit_test)
+
+# there are alwarys some symbol problem in manually build library, some was symbol not found, some was stdxxx duplicate symbols in lib, so use symengine installed by vcpkg, and it works fine.
 # include_directories("D:\\Library\\symengine-0.13.0")
 # include_directories("D:\\Library\\symengine-0.13.0\\build")
 # include_directories("D:\\Library\\symengine-0.13.0\\build\\symengine\\utilities\\teuchos")
