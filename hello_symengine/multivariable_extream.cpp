@@ -1,3 +1,4 @@
+#include <iostream>
 #include <vector>
 #include <stdexcept>
 #include <random>
@@ -10,6 +11,8 @@
 #include <symengine/add.h>
 #include <symengine/matrix.h>
 #include <symengine/integer.h>
+
+#include "unit_test.h"
 
 class Polyhedron3D
 {
@@ -59,7 +62,16 @@ double get_double_from_solution(const SymEngine::RCP<const SymEngine::Basic>& so
     auto number = dynamic_cast<const SymEngine::RealDouble*>(solution.get());
     if(number == nullptr)
     {
-        throw std::exception("solution 3d cannot cast to double");
+        // try to cast into integer
+        auto int_number = dynamic_cast<const SymEngine::Integer*>(solution.get());
+        if (int_number == nullptr)
+        {
+            throw std::exception("solution 3d cannot cast to double and integer");
+        }
+        else
+        {
+            return double(int_number->as_int());
+        }
     }
     else
     {
@@ -84,14 +96,15 @@ bool point_on_line(const VectorXd& point, const VectorXd& v0, const VectorXd& v1
 }
 
 template <typename RandomType>
-RandomType get_random_value(const RandomType& upper, const RandomType& lower)
+RandomType get_random_value(const RandomType& lower, const RandomType& upper)
 {
-    using namespace std;
-    uniform_real_distribution<RandomType> unif(lower_bound, upper_bound);
+    //using namespace std;
+    std::uniform_real_distribution<RandomType> unif(lower, upper);
 
-    default_random_engine re;
+    std::random_device rd;
+    std::default_random_engine generator(rd());
     // Getting a random double value
-    RandomType random_double = unif(re);
+    RandomType random_double = unif(generator);
     return random_double;
 }
 
@@ -147,9 +160,11 @@ bool point_inside_mesh(
     // TODO: the following use simplest method, just iterate all triangle and test if they has intersection(if intersection lie on boundary, then drop this case, and cast a new ray)
 
     int intersect_count = 0;
+    bool intersect_with_boundary = true;
     // if ray intersect with mesh on boundary or vertex, then try again
-    while(true)
+    while(intersect_with_boundary)
     {
+        intersect_with_boundary = false;
         Eigen::Vector3d dir;
         dir[0] = get_random_value<double>(0.0f, 10.0f);
         dir[1] = get_random_value<double>(0.0f, 10.0f);
@@ -166,6 +181,7 @@ bool point_inside_mesh(
                 if(point_on_line<Eigen::Vector3d>(intersect_point, vertices[triangle.x()], vertices[triangle.y()]) || point_on_line<Eigen::Vector3d>(intersect_point, vertices[triangle.x()], vertices[triangle.z()]) || point_on_line<Eigen::Vector3d>(intersect_point, vertices[triangle.y()], vertices[triangle.z()]))
                 {
                     // if on boundary, the clean intersect count
+                    intersect_with_boundary = true;
                     intersect_count = 0;
                     break; // jump to try again, and get new dir
                 }
@@ -192,9 +208,9 @@ bool ray_line_intersect(const Eigen::Vector2d& v0, const Eigen::Vector2d& v1, co
     auto symbol_b = SymEngine::symbol("b");
     SymEngine::Expression ex_t(symbol_t);
     SymEngine::Expression ex_b(symbol_b);
-    // construct equation: O + t * D = (1 - b) V0 + V1;
-    SymEngine::Expression equation1 = orig[0] + ex_t * dir[0] - (1 - ex_b) * v0[0] + v1[0];
-    SymEngine::Expression equation2 = orig[1] + ex_t * dir[1] - (1 - ex_b) * v0[1] + v1[1];
+    // construct equation: O + t * D = (1 - b) V0 + b * V1;
+    SymEngine::Expression equation1 = orig[0] + ex_t * dir[0] - (1 - ex_b) * v0[0] - ex_b * v1[0];
+    SymEngine::Expression equation2 = orig[1] + ex_t * dir[1] - (1 - ex_b) * v0[1] - ex_b * v1[1];
     auto solutions = SymEngine::linsolve({equation1.get_basic(), equation2.get_basic()}, {symbol_t, symbol_b});
     tnear = get_double_from_solution(solutions[0]);
     b = get_double_from_solution(solutions[1]);
@@ -208,8 +224,10 @@ bool ray_line_intersect(const Eigen::Vector2d& v0, const Eigen::Vector2d& v1, co
 bool point_inside_triangle(const Eigen::Vector2d& v0, const Eigen::Vector2d& v1, const Eigen::Vector2d& v2, const Eigen::Vector2d& orig)
 {
     int intersect_count = 0;
-    while(true)
+    bool intersect_with_boundary = true;
+    while(intersect_with_boundary)
     {
+        intersect_with_boundary = false;
         Eigen::Vector2d dir;
         dir[0] = get_random_value<double>(0.0f, 10.0f);
         dir[1] = get_random_value<double>(0.0f, 10.0f);
@@ -225,6 +243,7 @@ bool point_inside_triangle(const Eigen::Vector2d& v0, const Eigen::Vector2d& v1,
                 auto intersect_point = orig + tnear * dir;
                 if(intersect_point == line[0] || intersect_point == line[1])
                 {
+                    intersect_with_boundary = true;
                     intersect_count = 0;
                     break;
                 }
@@ -245,7 +264,7 @@ bool point_inside_triangle(const Eigen::Vector2d& v0, const Eigen::Vector2d& v1,
     }
 }
 
-std::pair<double, double> min_max_in_line(
+std::tuple<double, double> min_max_in_line(
     const Eigen::Vector2d& v0, const Eigen::Vector2d& v1,
     const std::vector<SymEngine::RCP<const SymEngine::Symbol>> symbol_axes,
     const SymEngine::Expression& ex/** one axis has already been substitued, composed by symbol_axes */
@@ -261,6 +280,9 @@ std::pair<double, double> min_max_in_line(
     SymEngine::Expression sub_ex0(symbol_axes[0]);
     SymEngine::Expression sub_ex1(symbol_axes[1]);
     SymEngine::Expression line_ex = a * sub_ex0 + b * sub_ex1 + c;
+
+    std::cout << "line equation: " << line_ex << std::endl;
+
     auto calculate_extream_value_in_1d_line = [&](int cutted_axis, int retained_axis){
         auto cutted_symbol = symbol_axes[cutted_axis];
         auto retained_symbol = symbol_axes[retained_axis];
@@ -270,8 +292,12 @@ std::pair<double, double> min_max_in_line(
         {
             // one dimention: line
             auto i_d_ex = ex.subs({{cutted_symbol, reduce_dim_solution}});
+            std::cout << "i_d_ex: " << i_d_ex << std::endl;
             auto derivative = i_d_ex.diff(retained_symbol);
-            auto i_d_solutions = SymEngine::linsolve({derivative}, {retained_symbol});
+            std::cout << "derivative: " << derivative << std::endl;
+            auto i_d_solutions = SymEngine::linsolve({derivative.get_basic()}, {retained_symbol});
+            std::cout << "i_d_solution: " << *(i_d_solutions[0].get()) << std::endl;
+            std::cout << "type i_d_solution: " << typeid(*(i_d_solutions[0].get())).name() << std::endl;
             double i_critical_point = get_double_from_solution(i_d_solutions[0]);
             // critical point inside interval
             if(std::abs(i_critical_point - v0[retained_axis] + i_critical_point - v1[retained_axis]) < std::abs(v0[retained_axis] - v1[retained_axis]))
@@ -282,15 +308,15 @@ std::pair<double, double> min_max_in_line(
                 update_min_max(i_d_ex, substituter, desired_min, desired_max);
             }
             // calculate value in endpoint 0
-            std::map<SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCPBasicKeyLess> substituter{
+            std::map<SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCPBasicKeyLess> substituter1{
                 {retained_symbol, SymEngine::real_double(v0[retained_axis])},
             };
-            update_min_max(i_d_ex, substituter, desired_min, desired_max);
+            update_min_max(i_d_ex, substituter1, desired_min, desired_max);
             // calculate value in endpoint 1
-            std::map<SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCPBasicKeyLess> substituter{
+            std::map<SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCPBasicKeyLess> substituter2{
                 {retained_symbol, SymEngine::real_double(v1[retained_axis])},
             };
-            update_min_max(i_d_ex, substituter, desired_min, desired_max);
+            update_min_max(i_d_ex, substituter2, desired_min, desired_max);
         }
     };
     if(b != 0.0f)
@@ -305,10 +331,10 @@ std::pair<double, double> min_max_in_line(
     {
         throw std::exception("both line a and b is zero, there must be problems");
     }
-    return std::make_pair(desired_min, desired_max);
+    return {desired_min, desired_max};
 }
 
-std::pair<double, double> min_max_in_triangle(
+std::tuple<double, double> min_max_in_triangle(
     const Eigen::Vector3d& v0, const Eigen::Vector3d& v1, const Eigen::Vector3d& v2,
     // const SymEngine::RCP<const SymEngine::Symbol> &x, const SymEngine::RCP<const SymEngine::Symbol> &y, const SymEngine::RCP<const SymEngine::Symbol> &z,
     const std::vector<SymEngine::RCP<const SymEngine::Symbol>> symbol_axes,
@@ -324,28 +350,32 @@ std::pair<double, double> min_max_in_triangle(
     Eigen::Vector3d plane_normal = vec01.cross(vec02);
     double a = plane_normal.x(), b = plane_normal.y(), c = plane_normal.z();
     // bring in one point to calculate d
-    double d = 0 - a * v0.x() - b * v1.y() - c * v1.z();
+    double d = 0 - a * v0.x() - b * v0.y() - c * v0.z();
 
     SymEngine::Expression x_(symbol_axes[0]);
     SymEngine::Expression y_(symbol_axes[1]);
     SymEngine::Expression z_(symbol_axes[2]);
     SymEngine::Expression plane_ex = a * x_ + b * y_ + c * z_ + d;
 
+    std::cout << "plane equation: " << plane_ex << std::endl;
+
     auto calculate_extream_value_in_2d_triangle = [&](int cutted_axis, int retained_axis0, int retained_axis1){
         auto cutted_symbol = symbol_axes[cutted_axis];
         auto retained_symbol0 = symbol_axes[retained_axis0];
         auto retained_symbol1 = symbol_axes[retained_axis1];
 
+
         auto reduce_dim_solutions = SymEngine::solve(plane_ex.get_basic(), symbol_axes[cutted_axis]);
         for(const auto& reduce_dim_solution : reduce_dim_solutions->get_args())
         {
+            std::cout << *(reduce_dim_solution.get()) << std::endl;
             // two dimention
             auto ii_d_ex = ex.subs({{cutted_symbol, reduce_dim_solution}});
             // calculate derivative of retained axes
             auto derivative0 = ii_d_ex.diff(retained_symbol0);
             auto derivative1 = ii_d_ex.diff(retained_symbol1);
             // solve linear equation in 2d
-            auto ii_d_solutions = SymEngine::linsolve({derivative0.get_basic(), derivative1.get_basic()}, {retained_symbol0, retained_symbol0});
+            auto ii_d_solutions = SymEngine::linsolve({derivative0.get_basic(), derivative1.get_basic()}, {retained_symbol0, retained_symbol1});
             double ii_coor0 = get_double_from_solution(ii_d_solutions[0]), ii_coor1 = get_double_from_solution(ii_d_solutions[1]);
             Eigen::Vector2d ii_critical_point{ii_coor0, ii_coor1};
             Eigen::Vector2d ii_d_v0{v0[retained_axis0], v0[retained_axis1]}, ii_d_v1{v1[retained_axis0], v1[retained_axis1]}, ii_d_v2{v2[retained_axis0], v2[retained_axis1]};
@@ -353,7 +383,7 @@ std::pair<double, double> min_max_in_triangle(
             {
                 std::map<SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCPBasicKeyLess> substituter{
                     {retained_symbol0, SymEngine::real_double(ii_critical_point.x())},
-                    {retained_symbol0, SymEngine::real_double(ii_critical_point.y())},
+                    {retained_symbol1, SymEngine::real_double(ii_critical_point.y())},
                 };
                 auto substitute_result = ii_d_ex.subs(substituter);
                 auto substitute_result_double = dynamic_cast<const SymEngine::RealDouble*>(substitute_result.get_basic().get());
@@ -368,12 +398,12 @@ std::pair<double, double> min_max_in_triangle(
             };
             for(const auto& line: lines)
             {
-                auto min_max_value = min_max_in_line(line[0], line[1], {retained_symbol0, retained_symbol1}, ii_d_ex);
-                min_array.emplace_back(min_max_value.first);
-                max_array.emplace_back(min_max_value.second);
+                auto [min_value, max_value] = min_max_in_line(line[0], line[1], {retained_symbol0, retained_symbol1}, ii_d_ex);
+                min_array.emplace_back(min_value);
+                max_array.emplace_back(max_value);
             }
             desired_min = std::min(desired_min, *std::min_element(min_array.begin(), min_array.end()));
-            desired_max = std::min(desired_max, *std::max_element(max_array.begin(), max_array.end()));
+            desired_max = std::max(desired_max, *std::max_element(max_array.begin(), max_array.end()));
         }
     };
 
@@ -394,43 +424,27 @@ std::pair<double, double> min_max_in_triangle(
     {
         throw std::exception("all axis in normal is zero, there are must problems!");
     }
+    return {desired_min, desired_max};
 }
 
 // write code from beginning to end
-void min_max_multivariable_polynomial()
+std::tuple<double, double> min_max_3_variable_quadratic_polynomial(
+    const SymEngine::Expression& equation,
+    const std::vector<SymEngine::RCP<const SymEngine::Symbol>>& symbol_axes,
+    const std::vector<Eigen::Vector3d>& vertices,
+    const std::vector<Eigen::Vector3i>& triangles
+)
 {
-    // TODO: this is fake points and normals, should be replace
-    // interpolated points and its normals
-    std::vector<Eigen::Vector3d> interpolated_points;
-    std::vector<Eigen::Vector3d> interpolated_normals;
-
-    // get expression
-    auto x = SymEngine::symbol("x");
-    auto y = SymEngine::symbol("y");
-    auto z = SymEngine::symbol("z");
-    SymEngine::Expression x_(x);
-    SymEngine::Expression y_(y);
-    SymEngine::Expression z_(z);
-    SymEngine::Expression ex;
-    for(auto iter = interpolated_points.begin(); iter != interpolated_points.end(); iter++)
-    {
-        auto index = std::distance(interpolated_points.begin(), iter);
-        auto interpolated_point = *iter;
-        auto interpolated_normal = interpolated_normals[index];
-        ex = ex + pow(interpolated_normal.x() * (x_ - interpolated_point.x()) + interpolated_normal.y() * (y_ - interpolated_point.y()) + interpolated_normal.z() * (z_ - interpolated_point.z()), 2);
-    }
-    std::cout << ex << std::endl;
-
     // calculate deriative of x, y, z
-    SymEngine::Expression derivative_x = ex.diff(x);
+    SymEngine::Expression derivative_x = equation.diff(symbol_axes[0]);
     std::cout << "partial derivative of x: " << derivative_x << std::endl;
-    SymEngine::Expression derivative_y = ex.diff(y);
+    SymEngine::Expression derivative_y = equation.diff(symbol_axes[1]);
     std::cout << "partial derivative of y: " << derivative_y << std::endl;
-    SymEngine::Expression derivative_z = ex.diff(z);
+    SymEngine::Expression derivative_z = equation.diff(symbol_axes[2]);
     std::cout << "partial derivative of z: " << derivative_z << std::endl;
 
     // calculate 3d extream point
-    auto solutions_3d = SymEngine::linsolve({ derivative_x.get_basic(), derivative_y.get_basic(), derivative_z.get_basic() }, { x, y, z });
+    auto solutions_3d = SymEngine::linsolve({ derivative_x.get_basic(), derivative_y.get_basic(), derivative_z.get_basic() }, { symbol_axes[0], symbol_axes[1], symbol_axes[2] });
     Eigen::Vector3d extream_3d_point;
     auto get_3d_coor_func = [&](int index) {
         auto solution_3d_coor = solutions_3d[index];
@@ -450,18 +464,18 @@ void min_max_multivariable_polynomial()
 
     // TODO: this is fake 3d mesh, should be replace in the future
     // check if 3d extream point is in 3d range
-    std::vector<Eigen::Vector3d> vertices;
-    std::vector<Eigen::Vector3i> triangles;
+    // std::vector<Eigen::Vector3d> vertices;
+    // std::vector<Eigen::Vector3i> triangles;
     double desired_max = std::numeric_limits<double>::min(), desired_min = std::numeric_limits<double>::max();
     if(point_inside_mesh(vertices, triangles, extream_3d_point))
     {
         // get extream value and substitute max and min
         std::map<SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCPBasicKeyLess> substituter{
-            {x, SymEngine::real_double(extream_3d_point.x())},
-            {y, SymEngine::real_double(extream_3d_point.y())},
-            {z, SymEngine::real_double(extream_3d_point.z())},
+            {symbol_axes[0], SymEngine::real_double(extream_3d_point.x())},
+            {symbol_axes[1], SymEngine::real_double(extream_3d_point.y())},
+            {symbol_axes[2], SymEngine::real_double(extream_3d_point.z())},
         };
-        auto substitute_result = ex.subs(substituter);
+        auto substitute_result = equation.subs(substituter);
         auto substitute_result_double = dynamic_cast<const SymEngine::RealDouble*>(substitute_result.get_basic().get());
         if(substitute_result_double)
         {
@@ -487,10 +501,300 @@ void min_max_multivariable_polynomial()
     std::vector<double> min_vec, max_vec;
     for(const auto& triangle: triangles)
     {
-        auto min_max_value = min_max_in_triangle(vertices[triangle[0]], vertices[triangle[1]], vertices[triangle[2]], {x, y, z}, ex);
-        min_vec.emplace_back(min_max_value.first);
-        max_vec.emplace_back(min_max_value.second);
+        auto [min_value, max_value] = min_max_in_triangle(vertices[triangle[0]], vertices[triangle[1]], vertices[triangle[2]], {symbol_axes[0], symbol_axes[1], symbol_axes[2]}, equation);
+        min_vec.emplace_back(min_value);
+        max_vec.emplace_back(max_value);
     }
     desired_min = std::min(desired_min, *std::min_element(min_vec.begin(), min_vec.end()));
-    desired_max = std::min(desired_max, *std::max_element(min_vec.begin(), min_vec.end()));
+    desired_max = std::max(desired_max, *std::max_element(max_vec.begin(), max_vec.end()));
+    return { desired_min, desired_max };
+}
+
+TEST(GlobalTest, update_min_max)
+{
+    double desired_min = 5, desired_max = 1;
+    auto x = SymEngine::symbol("x");
+    auto y = SymEngine::symbol("y");
+    auto z = SymEngine::symbol("z");
+
+    SymEngine::Expression x_(x);
+    SymEngine::Expression y_(y);
+    SymEngine::Expression z_(z);
+
+    SymEngine::Expression ex;
+    ex = x_ + y_ + z_;
+
+    std::map<SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCPBasicKeyLess> substituter{
+        {x, SymEngine::real_double(1)},
+        {y, SymEngine::real_double(1)},
+        {z, SymEngine::real_double(1)},
+    };
+
+    update_min_max(ex, substituter, desired_min, desired_max);
+    ASSERT_EQ(3.0f, desired_min);
+    ASSERT_EQ(3.0f, desired_max);
+}
+
+TEST(GlobalTest, get_double_from_solution)
+{
+    auto x = SymEngine::symbol("x");
+    SymEngine::Expression x_(x);
+    SymEngine::Expression ex;
+    ex = ex + x_ - 1.0f;
+    auto solutions = SymEngine::linsolve({ ex.get_basic() }, { x });
+    for (const auto& solution : solutions)
+    {
+        double result = get_double_from_solution(solution);
+        ASSERT_EQ(result, 1.0f);
+    }
+}
+
+TEST(GlobalTest, point_on_line)
+{
+    // test point on line
+    {
+        Eigen::Vector3d point0{ 0, 0, 0 };
+        Eigen::Vector3d point1{ 1, 1, 1 };
+        Eigen::Vector3d point2{ 2, 2, 2 };
+        auto result = point_on_line<Eigen::Vector3d>(point1, point0, point2);
+        ASSERT_EQ(true, result);
+    }
+    // test point not on line
+    {
+        Eigen::Vector3d point0{ 0, 0, 0 };
+        Eigen::Vector3d point1{ 1, 1, 2 };
+        Eigen::Vector3d point2{ 2, 2, 2 };
+        auto result = point_on_line<Eigen::Vector3d>(point1, point0, point2);
+        ASSERT_EQ(false, result);
+    }
+}
+
+TEST(GlobalTest, get_random_value)
+{
+    double result = get_random_value<double>(1.0f, 10.0f);
+    EXPECT_TRUE((result >= 1.0f) && (result <= 10.0f));
+}
+
+TEST(GlobalTest, ray_triangle_intersect)
+{
+    // test intersect
+    {
+        Eigen::Vector3d v0{ 1, 0, 0 };
+        Eigen::Vector3d v1{ 0, 1, 0 };
+        Eigen::Vector3d v2{ 0, 0, 1 };
+
+        Eigen::Vector3d orig{ 0,0,0 };
+        Eigen::Vector3d dir{ 1,1,1 };
+
+        double tnear = 0.0f, u = 0.0f, v = 0.0f;
+        bool is_intersect = ray_triangle_intersect(v0, v1, v2, orig, dir, tnear, u, v);
+        ASSERT_EQ(true, is_intersect);
+    }
+
+    // test not intersect(reverse direction)
+    {
+        Eigen::Vector3d v0{ 1, 0, 0 };
+        Eigen::Vector3d v1{ 0, 1, 0 };
+        Eigen::Vector3d v2{ 0, 0, 1 };
+
+        Eigen::Vector3d orig{ 0,0,0 };
+        Eigen::Vector3d dir{ -1,-1,-1 };
+
+        double tnear = 0.0f, u = 0.0f, v = 0.0f;
+        bool is_intersect = ray_triangle_intersect(v0, v1, v2, orig, dir, tnear, u, v);
+        ASSERT_EQ(false, is_intersect);
+    }
+
+    // test not intersect
+    {
+        Eigen::Vector3d v0{ 1, 0, 0 };
+        Eigen::Vector3d v1{ 0, 1, 0 };
+        Eigen::Vector3d v2{ 0, 0, 1 };
+
+        Eigen::Vector3d orig{ 2,2,2 };
+        Eigen::Vector3d dir{ 1,1,1 };
+
+        double tnear = 0.0f, u = 0.0f, v = 0.0f;
+        bool is_intersect = ray_triangle_intersect(v0, v1, v2, orig, dir, tnear, u, v);
+        ASSERT_EQ(false, is_intersect);
+    }
+}
+
+TEST(GlobalTest, point_inside_mesh)
+{
+    Eigen::Vector3d v0{ 0, 0, 0 };
+    Eigen::Vector3d v1{ 1, 0, 0 };
+    Eigen::Vector3d v2{ 0, 1, 0 };
+    Eigen::Vector3d v3{ 0, 0, 1 };
+    std::vector<Eigen::Vector3d> vertices = {
+        v0, v1, v2, v3
+    };
+    std::vector<Eigen::Vector3i> triangles = {
+        Eigen::Vector3i{0, 1, 2},
+        Eigen::Vector3i{0, 1, 3},
+        Eigen::Vector3i{0, 2, 3},
+        Eigen::Vector3i{1, 2, 3},
+    };
+
+    // inside
+    {
+        Eigen::Vector3d orig = { 0.1, 0.1, 0.1 };
+        bool result = point_inside_mesh(vertices, triangles, orig);
+        ASSERT_EQ(true, result);
+    }
+
+    // outside
+    {
+        Eigen::Vector3d orig = { 2, 2, 2 };
+        bool result = point_inside_mesh(vertices, triangles, orig);
+        ASSERT_EQ(false, result);
+    }
+}
+
+TEST(GlobalTest, ray_line_intersect)
+{
+    Eigen::Vector2d v0{ 1, 0 };
+    Eigen::Vector2d v1{ 0, 1 };
+
+    double tnear = 0.0f, b = 0.0f;
+
+    // intersect
+    {
+        Eigen::Vector2d orig{ 0, 0 };
+        Eigen::Vector2d dir{ 1, 1 };
+        dir = dir.normalized();
+
+        bool result = ray_line_intersect(v0, v1, orig, dir, tnear, b);
+        ASSERT_EQ(true, result);
+    }
+
+    // not intersect(reverse direction)
+    {
+        Eigen::Vector2d orig{ 0, 0 };
+        Eigen::Vector2d dir{ -1, -1 };
+        dir = dir.normalized();
+
+        bool result = ray_line_intersect(v0, v1, orig, dir, tnear, b);
+        ASSERT_EQ(false, result);
+    }
+
+    // not intersect
+    {
+        Eigen::Vector2d orig{ 2, 2 };
+        Eigen::Vector2d dir{ 1, 1 };
+        dir = dir.normalized();
+
+        bool result = ray_line_intersect(v0, v1, orig, dir, tnear, b);
+        ASSERT_EQ(false, result);
+    }
+}
+
+TEST(GlobalTest, point_inside_triangle)
+{
+    Eigen::Vector2d v0{ 0, 0 };
+    Eigen::Vector2d v1{ 1, 0 };
+    Eigen::Vector2d v2{ 0, 1 };
+
+    // inside
+    {
+        Eigen::Vector2d orig{ 0.4f, 0.4f };
+        bool result = point_inside_triangle(v0, v1, v2, orig);
+        ASSERT_EQ(true, result);
+    }
+
+    // outside
+    {
+        Eigen::Vector2d orig{ 0.6f, 0.7f };
+        bool result = point_inside_triangle(v0, v1, v2, orig);
+        ASSERT_EQ(false, result);
+    }
+}
+
+TEST(GlobalTest, min_max_in_line)
+{
+    Eigen::Vector2d v0{ 1,0 };
+    Eigen::Vector2d v1{ 0,1 };
+    
+    auto x = SymEngine::symbol("x");
+    auto y = SymEngine::symbol("y");
+
+    SymEngine::Expression x_(x);
+    SymEngine::Expression y_(y);
+
+    SymEngine::Expression ex = SymEngine::pow(x_, 2) + SymEngine::pow(y_, 2);
+    auto [min_value, max_value] = min_max_in_line(v0, v1, { x, y }, ex);
+    ASSERT_EQ(0.5f, min_value);
+    ASSERT_EQ(1.0f, max_value);
+}
+
+TEST(GlobalTest, min_max_in_triangle)
+{
+    double double_deviation = 0.00000000000000010;
+    Eigen::Vector3d v0{ 1, 0, 0 };
+    Eigen::Vector3d v1{ 0, 1, 0 };
+    Eigen::Vector3d v2{ 0, 0, 1 };
+
+    auto x = SymEngine::symbol("x");
+    auto y = SymEngine::symbol("y");
+    auto z = SymEngine::symbol("z");
+
+    SymEngine::Expression x_(x);
+    SymEngine::Expression y_(y);
+    SymEngine::Expression z_(z);
+
+    SymEngine::Expression ex = SymEngine::pow(x_, 2) + SymEngine::pow(y_, 2) + SymEngine::pow(z_, 2);
+    auto [min_value, max_value] = min_max_in_triangle(v0, v1, v2, { x, y, z }, ex);
+    //ASSERT_EQ(double(1) / double(3), min_value);
+    EXPECT_TRUE(std::abs(double(1) / double(3) - min_value) < double_deviation);
+    ASSERT_EQ(1, max_value);
+}
+
+TEST(GlobalTest, min_max_3_variable_quadratic_polynomial)
+{
+    std::cout << "----------------------------test min_max_3_variable_quadratic_polynomial--------------------------" << std::endl;
+    // compute MIN/MAX SUM((N*(x - A))^2)
+    // interpolated points and its normals
+    std::vector<Eigen::Vector3d> interpolated_points = {
+        {0.5f, 0, 0},
+        {0, 0.5f, 0},
+        {0, 0, 0.5f},
+    };
+    std::vector<Eigen::Vector3d> interpolated_normals = {
+        {1, 1, 2},
+        {2, 1, 1},
+        {1, 2, 3},
+    };
+
+    // get expression
+    auto x = SymEngine::symbol("x");
+    auto y = SymEngine::symbol("y");
+    auto z = SymEngine::symbol("z");
+    SymEngine::Expression x_(x);
+    SymEngine::Expression y_(y);
+    SymEngine::Expression z_(z);
+    SymEngine::Expression ex;
+    for(auto iter = interpolated_points.begin(); iter != interpolated_points.end(); iter++)
+    {
+        auto index = std::distance(interpolated_points.begin(), iter);
+        auto interpolated_point = *iter;
+        auto interpolated_normal = interpolated_normals[index];
+        ex = ex + SymEngine::pow(interpolated_normal.x() * (x_ - interpolated_point.x()) + interpolated_normal.y() * (y_ - interpolated_point.y()) + interpolated_normal.z() * (z_ - interpolated_point.z()), 2);
+    }
+    std::cout << ex << std::endl;
+
+    std::vector<Eigen::Vector3d> vertices = {
+        {0, 0, 0},
+        {1, 0, 0},
+        {0, 1, 0},
+        {0, 0, 1},
+    };
+    std::vector<Eigen::Vector3i> triangles = {
+        {0, 1, 2},
+        {0, 1, 3},
+        {0, 2, 3},
+        {1, 2, 3},
+    };
+
+    auto [min_value, max_value] = min_max_3_variable_quadratic_polynomial(ex, {x, y, z}, vertices, triangles);
+    std::cout << min_value << "," << max_value << std::endl;
 }

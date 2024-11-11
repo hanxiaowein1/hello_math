@@ -281,6 +281,18 @@ void substitute_with_normal_value()
 
 int main()
 {
-    substitute_with_normal_value();
+    //linear_solver_test2();
+    auto x = SymEngine::symbol("x");
+    auto y = SymEngine::symbol("y");
+    auto z = SymEngine::symbol("z");
+
+    SymEngine::Expression x_(x);
+    SymEngine::Expression y_(y);
+    SymEngine::Expression z_(z);
+
+    SymEngine::Expression ex = x_ + y_ + z_ + 1;
+    auto solution = SymEngine::solve(ex.get_basic(), z);
+    std::cout << *(solution.get()) << std::endl;
+
     return 0;
 }

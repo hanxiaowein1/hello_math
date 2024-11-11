@@ -26,7 +26,8 @@ target_link_libraries(${PROJECT_NAME} "D:\\Library\\vcpkg\\packages\\flint_x64-w
 enable_testing()
 find_package(GTest CONFIG REQUIRED)
 add_executable(unit_test unit_test.cpp multivariable_extream.cpp)
-target_link_libraries(unit_test GTest::gtest GTest::gmock)
+target_link_libraries(unit_test GTest::gtest GTest::gmock PkgConfig::gmp symengine)
+target_link_libraries(unit_test "D:\\Library\\vcpkg\\packages\\flint_x64-windows\\lib\\flint.lib")
 add_test(AllTestsInMain unit_test)
 
 # there are alwarys some symbol problem in manually build library, some was symbol not found, some was stdxxx duplicate symbols in lib, so use symengine installed by vcpkg, and it works fine.
