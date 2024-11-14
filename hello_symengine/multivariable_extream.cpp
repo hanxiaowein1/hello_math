@@ -13,6 +13,7 @@
 #include <symengine/integer.h>
 
 #include "unit_test.h"
+#include "multivariable_extream.h"
 
 class Polyhedron3D
 {
@@ -35,20 +36,6 @@ public:
 
 };
 
-class ExtreamLocation
-{
-public:
-    double value;
-    std::map<SymEngine::RCP<const SymEngine::Symbol>, double, SymEngine::RCPBasicKeyLess> location;
-    // Overloading the < operator for sorting
-    bool operator<(const ExtreamLocation& other) const {
-        return this->value < other.value; // Sort by value
-    }
-    void add_location(const SymEngine::RCP<const SymEngine::Symbol> &key, const double &value)
-    {
-        this->location.emplace(key, value);
-    }
-};
 
 std::ostream& operator<<(std::ostream& os, const ExtreamLocation& m)
 {

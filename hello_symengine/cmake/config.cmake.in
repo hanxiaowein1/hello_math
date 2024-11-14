@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(gmp REQUIRED IMPORTED_TARGET gmp)
+find_package(SymEngine CONFIG REQUIRED)
+find_package(GTest CONFIG REQUIRED)
+
+include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@-targets.cmake")
+check_required_components("@PROJECT_NAME@")
