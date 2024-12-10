@@ -14,6 +14,7 @@
 
 #include "unit_test.h"
 #include "multivariable_extream.h"
+#include "charles_symengine_common.h"
 
 class Polyhedron3D
 {
@@ -56,33 +57,6 @@ std::ostream& operator<<(std::ostream& os, const std::map<SymEngine::RCP<const S
     return os;
 }
 
-
-double substitute_with_number(
-    const SymEngine::Expression& ex,
-    const std::map<SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCPBasicKeyLess>& double_substituter
-)
-{
-    auto substitute_result = ex.subs(double_substituter);
-    auto substitute_result_double = dynamic_cast<const SymEngine::RealDouble*>(substitute_result.get_basic().get());
-    if(substitute_result_double)
-    {
-        auto value = substitute_result_double->as_double();
-        return value;
-    }
-    else
-    {
-        auto substitute_result_int = dynamic_cast<const SymEngine::Integer*>(substitute_result.get_basic().get());
-        if (substitute_result_int)
-        {
-            return double(substitute_result_int->as_int());
-        }
-        else
-        {
-            throw std::exception("cannot subtitute expression with double");
-        }
-    }
-}
-
 std::tuple<bool, bool> update_min_max(
     const SymEngine::Expression& ex,
     const std::map<SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCPBasicKeyLess>& double_substituter,
@@ -102,28 +76,6 @@ std::tuple<bool, bool> update_min_max(
         min_modified = true;
     }
     return {min_modified, max_modified};
-}
-
-double get_double_from_solution(const SymEngine::RCP<const SymEngine::Basic>& solution)
-{
-    auto number = dynamic_cast<const SymEngine::RealDouble*>(solution.get());
-    if(number == nullptr)
-    {
-        // try to cast into integer
-        auto int_number = dynamic_cast<const SymEngine::Integer*>(solution.get());
-        if (int_number == nullptr)
-        {
-            throw std::exception("solution 3d cannot cast to double and integer");
-        }
-        else
-        {
-            return double(int_number->as_int());
-        }
-    }
-    else
-    {
-        return number->as_double();
-    }
 }
 
 template <typename VectorXd>

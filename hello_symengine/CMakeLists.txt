@@ -26,14 +26,14 @@ target_link_libraries(hello_world "D:\\Library\\vcpkg\\packages\\flint_x64-windo
 
 enable_testing()
 find_package(GTest CONFIG REQUIRED)
-add_executable(unit_test unit_test.cpp multivariable_extream.cpp)
+add_executable(unit_test unit_test.cpp multivariable_extream.cpp charles_symengine_common.cpp)
 target_link_libraries(unit_test GTest::gtest GTest::gmock PkgConfig::gmp symengine)
 target_link_libraries(unit_test "D:\\Library\\vcpkg\\packages\\flint_x64-windows\\lib\\flint.lib")
 add_test(AllTestsInMain unit_test)
 
 
 # set(EXPORT_NAME multivariable_extream)
-add_library(${PROJECT_NAME} multivariable_extream.cpp)
+add_library(${PROJECT_NAME} multivariable_extream.cpp charles_symengine_common.cpp)
 target_link_libraries(${PROJECT_NAME} PkgConfig::gmp symengine)
 target_link_libraries(${PROJECT_NAME} "D:\\Library\\vcpkg\\packages\\flint_x64-windows\\lib\\flint.lib")
 target_link_libraries(${PROJECT_NAME} GTest::gtest GTest::gmock)
@@ -80,6 +80,7 @@ install(FILES
 )
 # install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES "${PROJECT_SOURCE_DIR}/multivariable_extream.h" DESTINATION include)
+install(FILES "${PROJECT_SOURCE_DIR}/charles_symengine_common.h" DESTINATION include)
 
 
 # there are alwarys some symbol problem in manually build library, some was symbol not found, some was stdxxx duplicate symbols in lib, so use symengine installed by vcpkg, and it works fine.
