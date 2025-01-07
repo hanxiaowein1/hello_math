@@ -6,6 +6,7 @@
 #include <symengine/add.h>
 #include <symengine/matrix.h>
 #include <symengine/integer.h>
+#include <symengine/visitor.h>
 
 // using SymEngine::Expression;
 
@@ -279,9 +280,9 @@ void substitute_with_normal_value()
     }
 }
 
-int main()
+// seems impossible
+void solve_equation_with_unlimited_answer()
 {
-    //linear_solver_test2();
     auto x = SymEngine::symbol("x");
     auto y = SymEngine::symbol("y");
     auto z = SymEngine::symbol("z");
@@ -290,9 +291,66 @@ int main()
     SymEngine::Expression y_(y);
     SymEngine::Expression z_(z);
 
-    SymEngine::Expression ex = x_ + y_ + z_ + 1;
-    auto solution = SymEngine::solve(ex.get_basic(), z);
-    std::cout << *(solution.get()) << std::endl;
+    SymEngine::Expression eq0 = 4.0*(-3.0 + x_) + 4.0*(-2.0 + x_);
+    SymEngine::Expression eq1 = 0;
+    SymEngine::Expression eq2 = 0;
 
+    // std::cout << 
+
+    // SymEngine::vec_basic equations{eq0, eq1, eq2};
+    // // auto solutions = SymEngine::solve(equations, {x, y, z});
+    // auto solution = SymEngine::solve(eq0, x);
+    // //std::cout << solution << std::endl;
+    // std::cout << typeid(solution).name() << std::endl;
+}
+
+void coeff_test()
+{
+    using namespace SymEngine;
+    auto x = symbol("x");
+    auto y = symbol("y");
+    auto z = symbol("z");
+
+    Expression x_(x);
+    Expression y_(y);
+    Expression z_(z);
+
+    Expression eq0 = 4.2*(-3.0 + x_) + 4.0*(-2.0 + x_) + 5.0 * y_ + 99 * z_;
+
+    {
+        auto ret = coeff(eq0, *x, *integer(1));
+        std::cout << typeid(ret).name() << std::endl;
+        auto x_coeff = dynamic_cast<const SymEngine::RealDouble*>(ret.get());
+        if (x_coeff)
+        {
+            std::cout << x_coeff->as_double() << std::endl;
+        }
+    }
+
+    {
+        auto ret = coeff(eq0, *y, *integer(1));
+        std::cout << typeid(ret).name() << std::endl;
+        auto y_coeff = dynamic_cast<const SymEngine::RealDouble*>(ret.get());
+        if (y_coeff)
+        {
+            std::cout << y_coeff->as_double() << std::endl;
+        }
+    }
+    
+    {
+        auto ret = coeff(eq0, *z, *integer(1));
+        std::cout << typeid(ret).name() << std::endl;
+        auto z_coeff = dynamic_cast<const SymEngine::Number*>(ret.get());
+        if (z_coeff)
+        {
+            std::cout << "coeff of z is number" << std::endl;
+        }
+
+    }
+}
+
+int main()
+{
+    coeff_test();
     return 0;
 }

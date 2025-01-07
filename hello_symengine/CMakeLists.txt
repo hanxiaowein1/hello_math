@@ -14,7 +14,8 @@ add_executable(hello_world hello_world.cpp)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(gmp REQUIRED IMPORTED_TARGET gmp)
 target_link_libraries(hello_world PkgConfig::gmp)
-
+find_package(Eigen3 REQUIRED)
+include_directories(${Eigen3_INCLUDE_DIRS})
 find_package(SymEngine CONFIG REQUIRED)
 target_link_libraries(hello_world symengine)
 

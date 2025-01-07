@@ -1,4 +1,5 @@
 #include "charles_symengine_common.h"
+#include <symengine/visitor.h>
 
 double get_double_from_solution(const SymEngine::RCP<const SymEngine::Basic>& solution)
 {
@@ -45,5 +46,21 @@ double substitute_with_number(
         {
             throw std::exception("cannot subtitute expression with double");
         }
+    }
+}
+
+double get_coefficient_of_symbol(const SymEngine::Expression& expression, const SymEngine::RCP<const SymEngine::Symbol>& symbol)
+{
+    using namespace SymEngine;
+    auto ret = coeff(expression, *symbol, *integer(1));
+    try
+    {
+        double coeff = get_double_from_solution(ret);
+        return coeff;
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return 0.0f;
     }
 }

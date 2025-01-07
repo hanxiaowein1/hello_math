@@ -560,6 +560,47 @@ std::tuple<double, double, std::map<SymEngine::RCP<const SymEngine::Symbol>, dou
     // return {desired_min, desired_max};
 }
 
+
+/**
+ * @brief check if linear equations has unique solution(suppose row and col are same)
+ * 
+ * @param expressions 
+ * @param symbols 
+ * @return true 
+ * @return false 
+ */
+bool has_unique_solution(const std::vector<SymEngine::Expression>& expressions, const std::vector<SymEngine::RCP<const SymEngine::Symbol>>& symbols)
+{
+    if(expressions.size() != symbols.size())
+    {
+        throw std::exception("currently not support the solution detection of matrix has different col and row");
+    }
+    using namespace Eigen;
+    int row = expressions.size();
+    int col = symbols.size();
+    MatrixXd coeff_matrix(row, col);
+    for(int i = 0; i < expressions.size(); i++)
+    {
+        const auto& expression = expressions[i];
+        for(int j = 0; j < symbols.size(); j++)
+        {
+            const auto& symbol = symbols[j];
+            double symbol_coeff = get_coefficient_of_symbol(expression, symbol);
+            coeff_matrix(i, j) = symbol_coeff;
+        }
+    }
+    FullPivLU<MatrixXd> coeff_lu_decomp(coeff_matrix);
+    auto rank = coeff_lu_decomp.rank();
+    if(rank < row)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
 // write code from beginning to end
 std::tuple<double, double, std::map<SymEngine::RCP<const SymEngine::Symbol>, double, SymEngine::RCPBasicKeyLess>, std::map<SymEngine::RCP<const SymEngine::Symbol>, double, SymEngine::RCPBasicKeyLess>> min_max_3_variable_quadratic_polynomial(
     const SymEngine::Expression& equation,
@@ -919,9 +960,9 @@ TEST(GlobalTest, min_max_3_variable_quadratic_polynomial)
         {0, 0, 0.5f},
     };
     std::vector<Eigen::Vector3d> interpolated_normals = {
-        {0, 1, 2},
-        {2, 0, 1},
-        {1, 2, 0},
+        {1, 2, 3},
+        {-1, 3, 4},
+        {3, 2, 5},
     };
 
     // get expression
@@ -957,15 +998,114 @@ TEST(GlobalTest, min_max_3_variable_quadratic_polynomial)
     auto [min_value, max_value, min_location, max_location] = min_max_3_variable_quadratic_polynomial(ex, {x, y, z}, vertices, triangles);
     std::cout << "min_value" << ": " << min_value << std::endl;
     std::cout << min_location << std::endl;
-    // std::cout << "min location" << std::endl;
-    // std::cout << "x: " << min_location.at(x);
-    // std::cout << "y: " << min_location.at(y);
-    // std::cout << "z: " << min_location.at(z);
 
     std::cout << "max_value" << ": " << max_value << std::endl;
     std::cout << "max location" << std::endl;
     std::cout << max_location << std::endl;
-    // std::cout << "x: " << max_location.at(x);
-    // std::cout << "y: " << max_location.at(y);
-    // std::cout << "z: " << max_location.at(z);
+}
+
+TEST(GlobalTest, min_max_3_variable_quadratic_polynomial_2)
+{
+    // test case 8, if normal are same, and all point has same z, only different in x, y, see if minimum point is on the plane
+    std::cout << "----------------------------test min_max_3_variable_quadratic_polynomial--------------------------" << std::endl;
+    // compute MIN/MAX SUM((N*(x - A))^2)
+    // interpolated points and its normals
+    std::vector<Eigen::Vector3d> interpolated_points = {
+        {0, 0, 0.5f},
+        {1, 0, 0.5f},
+        {1, 1, 0.5f},
+        {0, 1, 0.5f}
+    };
+    std::vector<Eigen::Vector3d> interpolated_normals = {
+        {0, 0, 1},
+        {0, 0, 1},
+        {0, 0, 1},
+        { 0, 0, 1 }
+    };
+
+    // get expression
+    auto x = SymEngine::symbol("x");
+    auto y = SymEngine::symbol("y");
+    auto z = SymEngine::symbol("z");
+    SymEngine::Expression x_(x);
+    SymEngine::Expression y_(y);
+    SymEngine::Expression z_(z);
+    SymEngine::Expression ex;
+    for (auto iter = interpolated_points.begin(); iter != interpolated_points.end(); iter++)
+    {
+        auto index = std::distance(interpolated_points.begin(), iter);
+        auto interpolated_point = *iter;
+        auto interpolated_normal = interpolated_normals[index];
+        ex = ex + SymEngine::pow(interpolated_normal.x() * (x_ - interpolated_point.x()) + interpolated_normal.y() * (y_ - interpolated_point.y()) + interpolated_normal.z() * (z_ - interpolated_point.z()), 2);
+    }
+    std::cout << ex << std::endl;
+
+    std::vector<Eigen::Vector3d> vertices = {
+        {0, 0, 1},
+        {1, 0, 1},
+        {1, 1, 1},
+        {0, 1, 1},
+        {0, 0, 0},
+        {1, 0, 0},
+        {1, 1, 0},
+        {0, 1, 0}
+    };
+    std::vector<Eigen::Vector3i> triangles = {
+        {0, 1, 2},
+        {0, 2, 3},
+        {0, 4, 5},
+        {0, 5, 1},
+        {4, 6, 5},
+        {4, 7, 6},
+        {6, 7, 3},
+        {6, 3, 2},
+        {1, 5, 2},
+        {2, 5, 6},
+        {0, 3, 4},
+        {3, 7, 4}
+    };
+
+    auto [min_value, max_value, min_location, max_location] = min_max_3_variable_quadratic_polynomial(ex, { x, y, z }, vertices, triangles);
+    std::cout << "min_value" << ": " << min_value << std::endl;
+    std::cout << min_location << std::endl;
+
+    std::cout << "max_value" << ": " << max_value << std::endl;
+    std::cout << "max location" << std::endl;
+    std::cout << max_location << std::endl;
+}
+
+TEST(GlobalTest, has_unique_solution)
+{
+    // did has one only solution
+    {
+        auto x = SymEngine::symbol("x");
+        auto y = SymEngine::symbol("y");
+        auto z = SymEngine::symbol("z");
+        SymEngine::Expression x_(x);
+        SymEngine::Expression y_(y);
+        SymEngine::Expression z_(z);
+
+        SymEngine::Expression ex0 = x_ + y_ + z_;
+        SymEngine::Expression ex1 = 4 * x_ + 5 * y_ + 6 * z_;
+        SymEngine::Expression ex2 = 7 * x_ + 8 * y_ + 10 * z_;
+
+        bool unique_solution = has_unique_solution({ex0, ex1, ex2}, {x, y, z});
+        ASSERT_EQ(unique_solution, true);
+    }
+    // has infinite solution
+    {
+        auto x = SymEngine::symbol("x");
+        auto y = SymEngine::symbol("y");
+        auto z = SymEngine::symbol("z");
+        SymEngine::Expression x_(x);
+        SymEngine::Expression y_(y);
+        SymEngine::Expression z_(z);
+
+        SymEngine::Expression ex0 = x_ + y_ + z_;
+        SymEngine::Expression ex1 = 2 * x_ + 2 * y_ + 2 * z_;
+        SymEngine::Expression ex2 = 7 * x_ + 8 * y_ + 9 * z_;
+
+        bool unique_solution = has_unique_solution({ex0, ex1, ex2}, {x, y, z});
+        ASSERT_EQ(unique_solution, false);
+    }
 }
