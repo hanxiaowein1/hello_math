@@ -12,6 +12,8 @@
 #ifndef __CHARLES_SYMENGINE_COMMON_H__
 #define __CHARLES_SYMENGINE_COMMON_H__
 
+#include <exception>
+
 #include <symengine/expression.h>
 #include <symengine/solve.h>
 #include <symengine/basic.h>
@@ -28,5 +30,12 @@ double substitute_with_number(
 
 double get_coefficient_of_symbol(const SymEngine::Expression& expression, const SymEngine::RCP<const SymEngine::Symbol>& symbol);
 
+class NoUniqueSolutionException : public std::exception
+{
+public:
+    const char* what() const noexcept override {
+        return "no unique solution";
+    }
+};
 
 #endif

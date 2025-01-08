@@ -343,18 +343,6 @@ std::tuple<double, double, std::map<SymEngine::RCP<const SymEngine::Symbol>, dou
                 //extream_location.location[cutted_symbol] = substitute_with_number(reduce_dim_solution, substituter);
                 extream_location.location.emplace(std::make_pair(cutted_symbol, substitute_with_number(reduce_dim_solution, substituter)));
                 multi_extream_location.emplace_back(std::move(extream_location));
-
-                // auto [min_modified, max_modified] = update_min_max(i_d_ex, substituter, desired_min, desired_max);
-                // if(min_modified)
-                // {
-                //     axis_minimum_location[retained_symbol] = i_critical_point;
-                //     axis_minimum_location[cutted_symbol] = substitute_with_number(reduce_dim_solution, substituter);
-                // }
-                // if(max_modified)
-                // {
-                //     axis_maximum_location[retained_symbol] = i_critical_point;
-                //     axis_maximum_location[cutted_symbol] = substitute_with_number(reduce_dim_solution, substituter);
-                // }
             }
             // calculate value in endpoint 0
             {
@@ -369,18 +357,6 @@ std::tuple<double, double, std::map<SymEngine::RCP<const SymEngine::Symbol>, dou
                 extream_location.location.emplace(std::make_pair(cutted_symbol, substitute_with_number(reduce_dim_solution, substituter1)));
                 multi_extream_location.emplace_back(std::move(extream_location));
             }
-
-            // auto [min_modified, max_modified] = update_min_max(i_d_ex, substituter1, desired_min, desired_max);
-            // if(min_modified)
-            // {
-            //     axis_minimum_location[retained_symbol] = i_critical_point;
-            //     axis_minimum_location[cutted_symbol] = substitute_with_number(reduce_dim_solution, substituter1);
-            // }
-            // if(max_modified)
-            // {
-            //     axis_maximum_location[retained_symbol] = i_critical_point;
-            //     axis_maximum_location[cutted_symbol] = substitute_with_number(reduce_dim_solution, substituter1);
-            // }
             // calculate value in endpoint 1
             {
                 std::map<SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCPBasicKeyLess> substituter2{
@@ -394,18 +370,6 @@ std::tuple<double, double, std::map<SymEngine::RCP<const SymEngine::Symbol>, dou
                 extream_location.location.emplace(std::make_pair(cutted_symbol, substitute_with_number(reduce_dim_solution, substituter2)));
                 multi_extream_location.emplace_back(std::move(extream_location));
             }
-
-            // std::tie(min_modified, max_modified) = update_min_max(i_d_ex, substituter2, desired_min, desired_max);
-            // if(min_modified)
-            // {
-            //     axis_minimum_location[retained_symbol] = i_critical_point;
-            //     axis_minimum_location[cutted_symbol] = substitute_with_number(reduce_dim_solution, substituter2);
-            // }
-            // if(max_modified)
-            // {
-            //     axis_maximum_location[retained_symbol] = i_critical_point;
-            //     axis_maximum_location[cutted_symbol] = substitute_with_number(reduce_dim_solution, substituter2);
-            // }
         }
     };
     if(b != 0.0f)
@@ -480,31 +444,13 @@ std::tuple<double, double, std::map<SymEngine::RCP<const SymEngine::Symbol>, dou
                     {retained_symbol0, SymEngine::real_double(ii_critical_point.x())},
                     {retained_symbol1, SymEngine::real_double(ii_critical_point.y())},
                 };
-                // auto substitute_result = ii_d_ex.subs(substituter);
-                // auto substitute_result_double = dynamic_cast<const SymEngine::RealDouble*>(substitute_result.get_basic().get());
                 ExtreamLocation extream_location;
                 extream_location.value = substitute_with_number(ii_d_ex, substituter);
-                //extream_location.location[retained_symbol0] = ii_critical_point.x();
                 extream_location.location.emplace(std::make_pair(retained_symbol0, ii_critical_point.x()));
-                //extream_location.location[retained_symbol1] = ii_critical_point.y();
                 extream_location.location.emplace(std::make_pair(retained_symbol1, ii_critical_point.y()));
-                //extream_location.location[cutted_symbol] = substitute_with_number(reduce_dim_solution, substituter);
                 extream_location.location.emplace(std::make_pair(cutted_symbol, substitute_with_number(reduce_dim_solution, substituter)));
                 multi_extream_location.emplace_back(std::move(extream_location));
 
-                // auto [min_modified, max_modified] = update_min_max(ii_d_ex, substituter, desired_min, desired_max);
-                // if(min_modified)
-                // {
-                //     axis_minimum_location[retained_symbol0] = ii_critical_point.x();
-                //     axis_minimum_location[retained_symbol1] = ii_critical_point.y();
-                //     axis_minimum_location[cutted_symbol] = substitute_with_number(reduce_dim_solution, substituter);
-                // }
-                // if(max_modified)
-                // {
-                //     axis_maximum_location[retained_symbol0] = ii_critical_point.x();
-                //     axis_maximum_location[retained_symbol1] = ii_critical_point.y();
-                //     axis_maximum_location[cutted_symbol] = substitute_with_number(reduce_dim_solution, substituter);
-                // }
             }
             // calculate min max in line
             // std::vector<double> min_array, max_array;
@@ -531,11 +477,7 @@ std::tuple<double, double, std::map<SymEngine::RCP<const SymEngine::Symbol>, dou
                 };
                 generate_new_extream_location(min_value, ii_d_minimum_location);
                 generate_new_extream_location(max_value, ii_d_maximum_location);
-                // min_array.emplace_back(min_value);
-                // max_array.emplace_back(max_value);
             }
-            // desired_min = std::min(desired_min, *std::min_element(min_array.begin(), min_array.end()));
-            // desired_max = std::max(desired_max, *std::max_element(max_array.begin(), max_array.end()));
         }
     };
 
@@ -617,76 +559,39 @@ std::tuple<double, double, std::map<SymEngine::RCP<const SymEngine::Symbol>, dou
     SymEngine::Expression derivative_z = equation.diff(symbol_axes[2]);
     std::cout << "partial derivative of z: " << derivative_z << std::endl;
 
-    // calculate 3d extream point
-    auto solutions_3d = SymEngine::linsolve({ derivative_x.get_basic(), derivative_y.get_basic(), derivative_z.get_basic() }, { symbol_axes[0], symbol_axes[1], symbol_axes[2] });
-    Eigen::Vector3d extream_3d_point;
-    extream_3d_point[0] = get_double_from_solution(solutions_3d[0]);
-    extream_3d_point[1] = get_double_from_solution(solutions_3d[1]);
-    extream_3d_point[2] = get_double_from_solution(solutions_3d[2]);
-
-    //auto get_3d_coor_func = [&](int index) {
-    //    auto solution_3d_coor = solutions_3d[index];
-    //    auto number = dynamic_cast<const SymEngine::RealDouble*>(solution_3d_coor.get());
-    //    if(number == nullptr)
-    //    {
-    //        throw std::exception("solution 3d cannot cast to double");
-    //    }
-    //    else
-    //    {
-    //        extream_3d_point[index] = number->as_double();
-    //    }
-    //};
-    //get_3d_coor_func(0);
-    //get_3d_coor_func(1);
-    //get_3d_coor_func(2);
-
-    // TODO: this is fake 3d mesh, should be replace in the future
-    // check if 3d extream point is in 3d range
-    // std::vector<Eigen::Vector3d> vertices;
-    // std::vector<Eigen::Vector3i> triangles;
-    double desired_max = std::numeric_limits<double>::min(), desired_min = std::numeric_limits<double>::max();
     std::vector<ExtreamLocation> multi_extream_location;
-    if(point_inside_mesh(vertices, triangles, extream_3d_point))
+
+    // check if it has unique solution, if not, skip it
+    if(has_unique_solution({ derivative_x.get_basic(), derivative_y.get_basic(), derivative_z.get_basic() }, { symbol_axes[0], symbol_axes[1], symbol_axes[2] }))
     {
-        // get extream value and substitute max and min
-        std::map<SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCPBasicKeyLess> substituter{
-            {symbol_axes[0], SymEngine::real_double(extream_3d_point.x())},
-            {symbol_axes[1], SymEngine::real_double(extream_3d_point.y())},
-            {symbol_axes[2], SymEngine::real_double(extream_3d_point.z())},
-        };
-        // auto substitute_result = equation.subs(substituter);
-        // auto substitute_result_double = dynamic_cast<const SymEngine::RealDouble*>(substitute_result.get_basic().get());
-        ExtreamLocation extream_location;
-        extream_location.value = substitute_with_number(equation, substituter);
-        //extream_location.location[symbol_axes[0]] = extream_3d_point.x();
-        extream_location.location.emplace(std::make_pair(symbol_axes[0], extream_3d_point.x()));
-        //extream_location.location[symbol_axes[1]] = extream_3d_point.y();
-        extream_location.location.emplace(std::make_pair(symbol_axes[1], extream_3d_point.y()));
-        //extream_location.location[symbol_axes[2]] = extream_3d_point.z();
-        extream_location.location.emplace(std::make_pair(symbol_axes[2], extream_3d_point.z()));
-        multi_extream_location.emplace_back(std::move(extream_location));
-        // if(substitute_result_double)
-        // {
-        //     auto value = substitute_result_double->as_double();
-        //     if(value > desired_max)
-        //     {
-        //         desired_max = value;
-        //     }
-        //     if(value < desired_min)
-        //     {
-        //         desired_min = value;
-        //     }
-        // }
-        // else
-        // {
-        //     throw std::exception("cannot subtitute expression with double");
-        // }
+        // calculate 3d extream point
+        auto solutions_3d = SymEngine::linsolve({ derivative_x.get_basic(), derivative_y.get_basic(), derivative_z.get_basic() }, { symbol_axes[0], symbol_axes[1], symbol_axes[2] });
+        Eigen::Vector3d extream_3d_point;
+        extream_3d_point[0] = get_double_from_solution(solutions_3d[0]);
+        extream_3d_point[1] = get_double_from_solution(solutions_3d[1]);
+        extream_3d_point[2] = get_double_from_solution(solutions_3d[2]);
+
+        if(point_inside_mesh(vertices, triangles, extream_3d_point))
+        {
+            // get extream value and substitute max and min
+            std::map<SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCP<const SymEngine::Basic>, SymEngine::RCPBasicKeyLess> substituter{
+                {symbol_axes[0], SymEngine::real_double(extream_3d_point.x())},
+                {symbol_axes[1], SymEngine::real_double(extream_3d_point.y())},
+                {symbol_axes[2], SymEngine::real_double(extream_3d_point.z())},
+            };
+            ExtreamLocation extream_location;
+            extream_location.value = substitute_with_number(equation, substituter);
+            extream_location.location.emplace(std::make_pair(symbol_axes[0], extream_3d_point.x()));
+            extream_location.location.emplace(std::make_pair(symbol_axes[1], extream_3d_point.y()));
+            extream_location.location.emplace(std::make_pair(symbol_axes[2], extream_3d_point.z()));
+            multi_extream_location.emplace_back(std::move(extream_location));
+        }
+    }
+    else
+    {
+        throw NoUniqueSolutionException();
     }
 
-    // get max/min value from 3d boundary
-    // for triangle in triangles
-    // compute min/max value from each triangle
-    // std::vector<double> min_vec, max_vec;
     for(const auto& triangle: triangles)
     {
         auto [min_value, max_value, min_location, max_location] = min_max_in_triangle(vertices[triangle[0]], vertices[triangle[1]], vertices[triangle[2]], {symbol_axes[0], symbol_axes[1], symbol_axes[2]}, equation);
@@ -698,12 +603,8 @@ std::tuple<double, double, std::map<SymEngine::RCP<const SymEngine::Symbol>, dou
         };
         generate_new_extream_location(min_value, min_location);
         generate_new_extream_location(max_value, max_location);
-        // min_vec.emplace_back(min_value);
-        // max_vec.emplace_back(max_value);
     }
-    // desired_min = std::min(desired_min, *std::min_element(min_vec.begin(), min_vec.end()));
-    // desired_max = std::max(desired_max, *std::max_element(max_vec.begin(), max_vec.end()));
-    // return { desired_min, desired_max };
+
     return {multi_extream_location[0].value, multi_extream_location[multi_extream_location.size() - 1].value, multi_extream_location[0].location, multi_extream_location[multi_extream_location.size() - 1].location};
 }
 

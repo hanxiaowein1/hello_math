@@ -2,7 +2,7 @@
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
-    ::testing::GTEST_FLAG(filter) = "GlobalTest.has_unique_solution";
+    ::testing::GTEST_FLAG(filter) = "GlobalTest.min_max_3_variable_quadratic_polynomial";
     int result = RUN_ALL_TESTS();
     return result;
 }
