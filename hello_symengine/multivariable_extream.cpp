@@ -504,6 +504,7 @@ std::tuple<double, double, std::map<SymEngine::RCP<const SymEngine::Symbol>, dou
     {
         throw std::exception("all axis in normal is zero, there are must problems!");
     }
+    std::sort(multi_extream_location.begin(), multi_extream_location.end());
     return {multi_extream_location[0].value, multi_extream_location[multi_extream_location.size() - 1].value, multi_extream_location[0].location, multi_extream_location[multi_extream_location.size() - 1].location};
     // return {desired_min, desired_max};
 }
@@ -611,6 +612,7 @@ std::tuple<double, double, std::map<SymEngine::RCP<const SymEngine::Symbol>, dou
         generate_new_extream_location(max_value, max_location);
     }
 
+    std::sort(multi_extream_location.begin(), multi_extream_location.end());
     return {multi_extream_location[0].value, multi_extream_location[multi_extream_location.size() - 1].value, multi_extream_location[0].location, multi_extream_location[multi_extream_location.size() - 1].location};
 }
 
