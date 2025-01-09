@@ -20,6 +20,12 @@
 #include <symengine/add.h>
 #include <symengine/matrix.h>
 #include <symengine/integer.h>
+#include <Eigen/Dense>
+
+namespace hello_symengine
+{
+extern double deviation;
+};
 
 double get_double_from_solution(const SymEngine::RCP<const SymEngine::Basic>& solution);
 
@@ -37,5 +43,9 @@ public:
         return "no unique solution";
     }
 };
+
+bool in_deviation(const double& v1, const double& v2);
+bool in_deviation(const Eigen::Vector2d& vec1, const Eigen::Vector2d& vec2);
+bool in_deviation(const Eigen::Vector3d& vec1, const Eigen::Vector3d& vec2);
 
 #endif

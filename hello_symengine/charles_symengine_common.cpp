@@ -64,3 +64,47 @@ double get_coefficient_of_symbol(const SymEngine::Expression& expression, const 
         return 0.0f;
     }
 }
+
+namespace hello_symengine
+{
+double deviation = 0.0000010000000000f;
+};
+
+bool in_deviation(const double& v1, const double& v2)
+{
+    if(std::abs(v1 - v2) < hello_symengine::deviation)
+    {
+        return true;
+    }
+    return false;
+}
+
+bool in_deviation(const Eigen::Vector2d& vec1, const Eigen::Vector2d& vec2)
+{
+    if(!in_deviation(vec1.x(), vec2.x()))
+    {
+        return false;
+    }
+    if(!in_deviation(vec1.y(), vec2.y()))
+    {
+        return false;
+    }
+    return true;
+}
+
+bool in_deviation(const Eigen::Vector3d& vec1, const Eigen::Vector3d& vec2)
+{
+    if(!in_deviation(vec1.x(), vec2.x()))
+    {
+        return false;
+    }
+    if(!in_deviation(vec1.y(), vec2.y()))
+    {
+        return false;
+    }
+    if(!in_deviation(vec1.z(), vec2.z()))
+    {
+        return false;
+    }
+    return true;
+}

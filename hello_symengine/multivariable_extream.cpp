@@ -84,7 +84,8 @@ bool point_on_line(const VectorXd& point, const VectorXd& v0, const VectorXd& v1
     auto distance0 = (v0 - point).norm();
     auto distance1 = (v1 - point).norm();
     auto total_distance = (v1 - v0).norm();
-    if(distance0 + distance1 == total_distance)
+    // if(distance0 + distance1 == total_distance)
+    if(in_deviation(distance0 + distance1, total_distance))
     {
         return true;
     }
@@ -262,11 +263,16 @@ bool point_inside_triangle(const Eigen::Vector2d& v0, const Eigen::Vector2d& v1,
         };
         for(const auto& line: lines)
         {
+            if(point_on_line(orig, line[0], line[1]))
+            {
+                return true;
+            }
             double tnear = 0.0f, b = 0.0f;
             if(ray_line_intersect(line[0], line[1], orig, dir, tnear, b))
             {
                 auto intersect_point = orig + tnear * dir;
-                if(intersect_point == line[0] || intersect_point == line[1])
+                // if(intersect_point == line[0] || intersect_point == line[1])
+                if(in_deviation(intersect_point, line[0]) || in_deviation(intersect_point, line[1]))
                 {
                     intersect_with_boundary = true;
                     intersect_count = 0;
